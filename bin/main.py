@@ -15,10 +15,22 @@ def main():
     b = Board(board_file)
     d = Dictionary(dict_file, b)
 
+
     b.capture([(0, 0), (0, 1), (1, 0)], Player.blue)
     print(b)
 
-    print(max(d.valid_words, key=len))
+    biggest_word = max(d.valid_words, key=len)
+    print(biggest_word)
+    print(d.valid_moves[biggest_word])
+
+    total_moves = 0
+    total_words = 0
+    for word, moves in d.valid_moves.items():
+        total_words += 1
+        total_moves += len(moves)
+
+    print(total_words)
+    print(total_moves)
 
 
 def points_for_word(board, word):
