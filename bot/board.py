@@ -11,14 +11,17 @@ class Player(Enum):
 
 
 class Tile:
-    def __init__(self, x, y, letter, owned_by):
+    def __init__(self, x, y, letter, player):
         self.x = x
         self.y = y
         self.letter = letter
-        self.owned_by = owned_by
+        self.player = player
 
     def __str__(self):
         return self.letter
+
+    def __repr__(self):
+        return '{letter}@{{{x}, {y}}}'.format(letter=self.letter, x=self.x, y=self.y)
 
 
 class Board:
@@ -42,10 +45,14 @@ class Board:
         """
         return self._valid_letters.copy()
 
+    @property
+    def layout(self):
+        return self._layout.copy()
+
     def capture(self, move, player):
         for pos in move:
             target = self._get_tile(*pos)
-            target.owned_by = player
+            target.player = player
         return self
 
 
@@ -53,8 +60,8 @@ class Board:
         score = {Player.blue: 0, Player.red: 0}
         for row in self._layout:
             for tile in row:
-                if tile.owned_by:
-                    score[tile.owned_by] += 1
+                if tile.player:
+                    score[tile.player] += 1
         return score
 
     def _make_valid_letters(self):
@@ -76,7 +83,7 @@ class Board:
             return None
 
     def _is_defended(self, tile):
-        player = tile.owned_by
+        player = tile.player
         if not player:
             # Uncaptured tiles cannot be defended
             return False
@@ -85,7 +92,7 @@ class Board:
                        (tile.x - 1, tile.y), (tile.x + 1, tile.y)]
         for each in surrounding:
             neighbor = self._get_tile(*each)
-            if neighbor and neighbor.owned_by != player:
+            if neighbor and neighbor.player != player:
                 return False
         return True
 
@@ -103,7 +110,7 @@ class Board:
             print_row = []
             for tile in row:
                 attrs = ['bold'] if self._is_defended(tile) else []
-                color = self._get_color_for(tile.owned_by)
+                color = self._get_color_for(tile.player)
                 print_row.append(colored(tile.letter.upper(), color, attrs=attrs))
             grid.append(" ".join(print_row))
         return "\n".join(grid)
