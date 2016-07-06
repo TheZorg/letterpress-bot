@@ -51,7 +51,7 @@ class Board(object):
         """
         ret = self.copy()
         for tile in move:
-            if not self._is_defended(tile.x, tile.y):
+            if not self._is_defended(tile):
                 ret._take_tile(tile, player)
         return ret
 
@@ -62,6 +62,18 @@ class Board(object):
         """
         return {Player.blue: sum(v == Player.blue for v in self._ownership.values()),
                 Player.red: sum(v == Player.red for v in self._ownership.values())}
+
+    def num_defended(self):
+        return {Player.blue: sum(p == Player.blue and self._is_defended(t)
+                                for t, p in self._ownership.items()),
+                Player.red: sum(p == Player.red and self._is_defended(t)
+                                 for t, p in self._ownership.items())}
+
+    def num_well_defended(self):
+        return {Player.blue: sum(p == Player.blue and self._is_well_defended(t)
+                                 for t, p in self._ownership.items()),
+                Player.red: sum(p == Player.red and self._is_well_defended(t)
+                                for t, p in self._ownership.items())}
 
     def is_full(self):
         return all(self._ownership.values())
@@ -92,8 +104,7 @@ class Board(object):
     def _take_tile(self, tile, player):
         self._ownership[tile] = player
 
-    def _is_defended(self, x, y):
-        tile = self._get_tile(x, y)
+    def _is_defended(self, tile):
         player = self._ownership[tile]
         if not player:
             # Uncaptured tiles cannot be defended
@@ -101,9 +112,26 @@ class Board(object):
 
         surrounding = [(tile.x, tile.y - 1), (tile.x, tile.y + 1),
                        (tile.x - 1, tile.y), (tile.x + 1, tile.y)]
-        for each in surrounding:
-            neighbor = self._get_tile(*each)
+        for x, y in surrounding:
+            neighbor = self._get_tile(x, y)
             if neighbor and self._ownership[neighbor] != player:
+                return False
+        return True
+
+    def _is_well_defended(self, tile):
+        player = self._ownership[tile]
+        if not player:
+            # Uncaptured tiles cannot be defended
+            return False
+
+        defended = [[self._is_defended(tile) and self._ownership[tile] == player for tile in row]
+                    for row in self._tiles]
+
+        surrounding = [(tile.x, tile.y - 1), (tile.x, tile.y + 1),
+                       (tile.x - 1, tile.y), (tile.x + 1, tile.y)]
+        for x, y in surrounding:
+            defended_neighbor = not 0 <= x < Board.SIZE or not 0 <= y < Board.SIZE or defended[y][x]
+            if not defended_neighbor:
                 return False
         return True
 
@@ -122,7 +150,7 @@ class Board(object):
             for tile in row:
                 colors = {'color': None, 'on_color': None}
                 color = self._get_color_for(self._ownership[tile])
-                if self._is_defended(tile.x, tile.y):
+                if self._is_defended(tile):
                     colors['on_color'] = 'on_' + color
                     colors['color'] = 'white'
                 else:

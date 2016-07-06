@@ -24,9 +24,10 @@ def main():
     player = Player.blue
     current_board = board
     while not current_board.is_full():
-        best_score_delta = -sys.maxsize
+        best_weighted_score = -sys.maxsize
         best_word = ''
         best_move = []
+        current_defended = current_board.num_defended()
 
         player = opponent(player)
 
@@ -36,16 +37,25 @@ def main():
                 new_board = current_board.capture(move, player)
                 new_score = new_board.score()
                 new_score_delta = new_score[player] - new_score[opponent(player)]
+
                 if new_board.is_full() and new_score_delta > 0:
                     best_word = word
                     best_move = move
                     winning_word_found = True
                     break
-                if new_score_delta > best_score_delta:
+
+                new_defended = new_board.num_defended()
+                defended_gained = new_defended[player] - current_defended[player]
+                opponent_defended_lost = (current_defended[opponent(player)]
+                                          - new_defended[opponent(player)])
+
+                new_weighted_score = new_score_delta + defended_gained + opponent_defended_lost
+
+                if new_weighted_score > best_weighted_score:
                     best_word = word
                     best_move = move
-                    best_score_delta = new_score_delta
-                elif new_score_delta == best_score_delta:
+                    best_weighted_score = new_weighted_score
+                elif new_weighted_score == best_weighted_score:
                     if len(word) > len(best_word):
                         best_word = word
                         best_move = move
