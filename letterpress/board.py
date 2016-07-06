@@ -31,7 +31,6 @@ class Board(object):
         :param layout_file: A file containing a grid of letters, with columns separated by spaces
                 and rows by newlines.
         """
-        print("Board.__init__")
         self._tiles = tuple([tuple([Tile(x, y, letter, None) for x, letter in enumerate(row.lower().split())])
                        for y, row in enumerate(layout_file)])
 
@@ -57,7 +56,7 @@ class Board(object):
         ret._tiles = tuple([tuple(row) for row in new_tiles])
         return ret
 
-    def current_score(self):
+    def score(self):
         """
         Get the current score for the board
         :return: {Player.blue: score, Player.red: score}
