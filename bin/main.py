@@ -18,7 +18,7 @@ def main():
     args = parser.parse_args()
     dict_file = args.dict
     board_file = args.board
-    board = Board(board_file)
+    board = Board(board_file.readlines())
     dictionary = Dictionary(dict_file, board)
 
     player = Player.blue

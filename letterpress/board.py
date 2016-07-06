@@ -11,7 +11,7 @@ class Player(Enum):
     red = 2
 
 
-class Tile(namedtuple('Tile', 'x y letter player')):
+class Tile(namedtuple('Tile', 'x y letter')):
     __slots__ = ()
 
     def __str__(self):
@@ -24,15 +24,16 @@ class Tile(namedtuple('Tile', 'x y letter player')):
 class Board(object):
     SIZE = 5
 
-    def __init__(self, layout_file):
+    def __init__(self, layout):
         """
         Create a new blank board from the give layout.
         :type layout_file: TextIOBase
         :param layout_file: A file containing a grid of letters, with columns separated by spaces
                 and rows by newlines.
         """
-        self._tiles = tuple([tuple([Tile(x, y, letter, None) for x, letter in enumerate(row.lower().split())])
-                       for y, row in enumerate(layout_file)])
+        self._tiles = [[Tile(x, y, letter) for x, letter in enumerate(row.lower().split())]
+                       for y, row in enumerate(layout)]
+        self._ownership = {tile: None for row in self._tiles for tile in row}
 
     @property
     def tiles(self):
@@ -49,11 +50,9 @@ class Board(object):
         :return: Copy of Board, with tiles captured
         """
         ret = self.copy()
-        new_tiles = [list(row) for row in ret._tiles]
         for tile in move:
             if not self._is_defended(tile.x, tile.y):
-                new_tiles[tile.y][tile.x] = tile._replace(player=player)
-        ret._tiles = tuple([tuple(row) for row in new_tiles])
+                ret._take_tile(tile, player)
         return ret
 
     def score(self):
@@ -61,15 +60,11 @@ class Board(object):
         Get the current score for the board
         :return: {Player.blue: score, Player.red: score}
         """
-        score = {Player.blue: 0, Player.red: 0}
-        for row in self._tiles:
-            for tile in row:
-                if tile.player:
-                    score[tile.player] += 1
-        return score
+        return {Player.blue: sum(v == Player.blue for v in self._ownership.values()),
+                Player.red: sum(v == Player.red for v in self._ownership.values())}
 
     def is_full(self):
-        return all(all(tile.player for tile in row) for row in self._tiles)
+        return all(self._ownership.values())
 
     def get_valid_letters(self):
         valid_letters = {}
@@ -82,7 +77,9 @@ class Board(object):
         return valid_letters
 
     def copy(self):
-        return copy.copy(self)
+        ret = copy.copy(self)
+        ret._ownership = self._ownership.copy()
+        return ret
 
     def _get_tile(self, x, y):
         x_in_bounds = 0 <= x < Board.SIZE
@@ -93,11 +90,11 @@ class Board(object):
             return None
 
     def _take_tile(self, tile, player):
-        self._tiles[tile.y][tile.x] = tile._replace(player=player)
+        self._ownership[tile] = player
 
     def _is_defended(self, x, y):
         tile = self._get_tile(x, y)
-        player = tile.player
+        player = self._ownership[tile]
         if not player:
             # Uncaptured tiles cannot be defended
             return False
@@ -106,7 +103,7 @@ class Board(object):
                        (tile.x - 1, tile.y), (tile.x + 1, tile.y)]
         for each in surrounding:
             neighbor = self._get_tile(*each)
-            if neighbor and neighbor.player != player:
+            if neighbor and self._ownership[neighbor] != player:
                 return False
         return True
 
@@ -124,7 +121,7 @@ class Board(object):
             print_row = []
             for tile in row:
                 colors = {'color': None, 'on_color': None}
-                color = self._get_color_for(tile.player)
+                color = self._get_color_for(self._ownership[tile])
                 if self._is_defended(tile.x, tile.y):
                     colors['on_color'] = 'on_' + color
                     colors['color'] = 'white'
