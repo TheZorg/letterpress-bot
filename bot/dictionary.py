@@ -10,14 +10,20 @@ class Dictionary():
         self._make_valid_words(dict_file, board)
         self._make_valid_moves(board)
 
-    def set_board(self, board):
-        self._make_valid_moves(board)
+    def play_word(self, word):
+        for i in range(len(word)):
+            prefix = word[0:i + 1]
+            if prefix in self.valid_words:
+                self.valid_words.remove(prefix)
+            if prefix in self.valid_moves:
+                del self.valid_moves[prefix]
 
     def _make_valid_words(self, dict, board):
         valid_words = set()
+        valid_letters = board.get_valid_letters()
         for word in dict:
             word = word.strip()
-            letters = board.valid_letters
+            letters = valid_letters.copy()
             valid = True
             for c in word.lower():
                 if c in letters and letters[c] > 0:
@@ -32,7 +38,7 @@ class Dictionary():
 
     def _make_valid_moves(self, board):
         tile_map = defaultdict(list)
-        for row in board.layout:
+        for row in board.tiles:
             for tile in row:
                 tile_map[tile.letter].append(tile)
 
