@@ -10,6 +10,9 @@ class Player(Enum):
     blue = 1
     red = 2
 
+    def opponent(self):
+        return Player.red if self == Player.blue else Player.blue
+
 
 class Tile(namedtuple('Tile', 'x y letter')):
     __slots__ = ()
@@ -93,7 +96,7 @@ class Board(object):
     def copy(self):
         ret = copy.copy(self)
         ret._ownership = self._ownership.copy()
-        ret._defended_cache = {}
+        ret._defended_cache = self._defended_cache.copy()
         return ret
 
     def _get_tile(self, tile_x, tile_y):
@@ -106,6 +109,22 @@ class Board(object):
 
     def _take_tile(self, tile, player):
         self._ownership[tile] = player
+        self._invalidate_defended_cache(tile)
+
+    def _invalidate_defended_cache(self, tile):
+        """ Invalidates defended cache for tile and surrounding tiles. """
+        if tile in self._defended_cache:
+            del self._defended_cache[tile]
+
+        for x, y in self.surrounding(tile):
+            neighbor = self._get_tile(x, y)
+            if neighbor and self._ownership[neighbor] and neighbor in self._defended_cache:
+                del self._defended_cache[neighbor]
+
+    @staticmethod
+    def surrounding(tile):
+        return [(tile.x, tile.y - 1), (tile.x, tile.y + 1),
+                (tile.x - 1, tile.y), (tile.x + 1, tile.y)]
 
     def _is_defended(self, tile):
         player = self._ownership[tile]
@@ -117,9 +136,7 @@ class Board(object):
             return self._defended_cache[tile]
 
         is_defended = True
-        surrounding = [(tile.x, tile.y - 1), (tile.x, tile.y + 1),
-                       (tile.x - 1, tile.y), (tile.x + 1, tile.y)]
-        for neighbor_x, neighbor_y in surrounding:
+        for neighbor_x, neighbor_y in self.surrounding(tile):
             neighbor = self._get_tile(neighbor_x, neighbor_y)
             if neighbor and self._ownership[neighbor] != player:
                 is_defended = False
@@ -138,10 +155,7 @@ class Board(object):
         if not self._is_defended(tile):
             return False
 
-        surrounding = [(tile.x, tile.y - 1), (tile.x, tile.y + 1),
-                       (tile.x - 1, tile.y), (tile.x + 1, tile.y)]
-
-        for x, y in surrounding:
+        for x, y in self.surrounding(tile):
             neighbor = self._get_tile(x, y)
             if neighbor and (self._ownership[neighbor] != player or not self._is_defended(neighbor)):
                 return False
