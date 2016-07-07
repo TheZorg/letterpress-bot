@@ -34,6 +34,7 @@ class Board(object):
         self._tiles = [[Tile(x, y, letter) for x, letter in enumerate(row.lower().split())]
                        for y, row in enumerate(layout)]
         self._ownership = {tile: None for row in self._tiles for tile in row}
+        self._defended_cache = {}
 
     @property
     def tiles(self):
@@ -60,20 +61,21 @@ class Board(object):
         Get the current score for the board
         :return: {Player.blue: score, Player.red: score}
         """
-        return {Player.blue: sum(v == Player.blue for v in self._ownership.values()),
-                Player.red: sum(v == Player.red for v in self._ownership.values())}
+        return {player: sum(v == player for v in self._ownership.values()) for player in Player}
 
     def num_defended(self):
-        return {Player.blue: sum(p == Player.blue and self._is_defended(t)
-                                for t, p in self._ownership.items()),
-                Player.red: sum(p == Player.red and self._is_defended(t)
-                                 for t, p in self._ownership.items())}
+        ret = {p: 0 for p in Player}
+        for tile, player in self._ownership.items():
+            if player:
+                ret[player] += self._is_defended(tile)
+        return ret
 
     def num_well_defended(self):
-        return {Player.blue: sum(p == Player.blue and self._is_well_defended(t)
-                                 for t, p in self._ownership.items()),
-                Player.red: sum(p == Player.red and self._is_well_defended(t)
-                                for t, p in self._ownership.items())}
+        ret = {p: 0 for p in Player}
+        for tile, player in self._ownership.items():
+            if player:
+                ret[player] += self._is_well_defended(tile)
+        return ret
 
     def is_full(self):
         return all(self._ownership.values())
@@ -91,13 +93,14 @@ class Board(object):
     def copy(self):
         ret = copy.copy(self)
         ret._ownership = self._ownership.copy()
+        ret._defended_cache = {}
         return ret
 
-    def _get_tile(self, x, y):
-        x_in_bounds = 0 <= x < Board.SIZE
-        y_in_bounds = 0 <= y < Board.SIZE
+    def _get_tile(self, tile_x, tile_y):
+        x_in_bounds = 0 <= tile_x < Board.SIZE
+        y_in_bounds = 0 <= tile_y < Board.SIZE
         if x_in_bounds and y_in_bounds:
-            return self._tiles[y][x]
+            return self._tiles[tile_y][tile_x]
         else:
             return None
 
@@ -110,13 +113,21 @@ class Board(object):
             # Uncaptured tiles cannot be defended
             return False
 
+        if tile in self._defended_cache:
+            return self._defended_cache[tile]
+
+        is_defended = True
         surrounding = [(tile.x, tile.y - 1), (tile.x, tile.y + 1),
                        (tile.x - 1, tile.y), (tile.x + 1, tile.y)]
-        for x, y in surrounding:
-            neighbor = self._get_tile(x, y)
+        for neighbor_x, neighbor_y in surrounding:
+            neighbor = self._get_tile(neighbor_x, neighbor_y)
             if neighbor and self._ownership[neighbor] != player:
-                return False
-        return True
+                is_defended = False
+                break
+
+        self._defended_cache[tile] = is_defended
+
+        return is_defended
 
     def _is_well_defended(self, tile):
         player = self._ownership[tile]
@@ -124,14 +135,15 @@ class Board(object):
             # Uncaptured tiles cannot be defended
             return False
 
-        defended = [[self._is_defended(tile) and self._ownership[tile] == player for tile in row]
-                    for row in self._tiles]
+        if not self._is_defended(tile):
+            return False
 
         surrounding = [(tile.x, tile.y - 1), (tile.x, tile.y + 1),
                        (tile.x - 1, tile.y), (tile.x + 1, tile.y)]
+
         for x, y in surrounding:
-            defended_neighbor = not 0 <= x < Board.SIZE or not 0 <= y < Board.SIZE or defended[y][x]
-            if not defended_neighbor:
+            neighbor = self._get_tile(x, y)
+            if neighbor and (self._ownership[neighbor] != player or not self._is_defended(neighbor)):
                 return False
         return True
 

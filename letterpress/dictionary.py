@@ -19,6 +19,7 @@ class Dictionary():
                 del self.valid_moves[prefix]
 
     def _make_valid_words(self, dict, board):
+        print("Dictionary: computing valid words...")
         valid_words = set()
         valid_letters = board.get_valid_letters()
         for word in dict:
@@ -37,6 +38,7 @@ class Dictionary():
         self.valid_words = valid_words
 
     def _make_valid_moves(self, board):
+        print("Dictionary: computing valid moves...")
         tile_map = defaultdict(list)
         for row in board.tiles:
             for tile in row:
