@@ -67,6 +67,7 @@ class Board(object):
         return {player: sum(v == player for v in self._ownership.values()) for player in Player}
 
     def num_defended(self):
+        # TODO: implement this as a DFS or something...
         ret = {p: 0 for p in Player}
         for tile, player in self._ownership.items():
             if player:
