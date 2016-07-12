@@ -1,4 +1,7 @@
 from collections import defaultdict
+from string import ascii_lowercase
+from copy import copy
+
 
 class Dictionary():
     def __init__(self, dict_file, board):
@@ -9,6 +12,7 @@ class Dictionary():
         """
         self._make_valid_words(dict_file, board)
         self._make_valid_moves(board)
+        self._index_words()
 
     def play_word(self, word):
         for i in range(len(word)):
@@ -63,8 +67,18 @@ class Dictionary():
         else:
             next, *next_rest = rest
             tile_map_copy = tile_map.copy()
-            tile_map_copy[letter] = tile_map_copy[letter].copy()
+            tile_map_copy[letter] = copy(tile_map_copy[letter])
             for tile in tile_map[letter]:
                 tile_map_copy[letter].remove(tile)
                 next_move = move + (tile,)
                 self._add_all(next, next_rest, next_move, moves, tile_map_copy)
+
+    def _index_words(self):
+        print("Dictionary: indexing words...")
+        index = defaultdict(lambda: {letter: set() for letter in ascii_lowercase})
+        for word in self.valid_words:
+            letter_counts = {letter: word.count(letter) for letter in set(word)}
+            for letter, count in letter_counts.items():
+                for i in range(count):
+                    index[i+1][letter].add(word)
+        self.word_index = index

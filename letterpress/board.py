@@ -94,6 +94,9 @@ class Board(object):
                     valid_letters[tile.letter] = 1
         return valid_letters
 
+    def get_free_letters(self):
+        return [tile.letter for tile, player in self._ownership.items() if not player]
+
     def copy(self):
         ret = copy.copy(self)
         ret._ownership = self._ownership.copy()
